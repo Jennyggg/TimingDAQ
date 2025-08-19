@@ -85,12 +85,10 @@ int main(int argc, char **argv)
   a.tree = new TTree("EventTree", "Digitized waveforms");
   a.branches = a.tree_in->GetListOfBranches();
   TPRegexp channelRegex("^DRS_Board[0-9]+_Group[0-9]+_Channel[0-9]+$");
-
   for (unsigned int i = 0; i < a.branches->GetEntries(); ++i) 
   {
     auto* br = (TBranch*)a.branches->At(i);
     const auto& name = br->GetName();
-
     if (channelRegex.Match(name))
     {
       auto* vec = new std::vector<float>;
@@ -101,15 +99,14 @@ int main(int argc, char **argv)
     {
       a.branch_names.emplace_back(name);
     }
-  }
-
+  } 
+  
   a.InitLoop();
-
+  a.tree_in->GetEntry(0);
   unsigned int evt_progress_print_rate = a.verbose ? 1 : 1000;
   unsigned int N_written_evts = 0;
   int n_evt_tree = a.tree_in->GetEntries();
-
-    for(int i_aux = a.start_evt; i_aux < n_evt_tree && (a.N_evts==0 || i_aux<a.N_evts); i_aux++)
+  for(int i_aux = a.start_evt; i_aux < n_evt_tree && (a.N_evts==0 || i_aux<a.N_evts); i_aux++)
     {
       if (i_aux % 500 == 0) std::cout << "Processing Event " << i_aux << std::endl;
       a.GetChannelsMeasurement(i_aux);

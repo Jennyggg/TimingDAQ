@@ -10,6 +10,7 @@ void DRSAnalyzer::Analyze()
   unsigned int i = 0;
   for(const auto& [n, chVec] : channelMap) 
   {
+    std::cout<<"n "<<n<<std::endl;
     const auto& chName = n + "_";
     auto channel = std::vector<float>(chVec->begin(), chVec->begin() + std::min((size_t)NUM_SAMPLES, chVec->size()));
 
@@ -21,12 +22,15 @@ void DRSAnalyzer::Analyze()
     //IMPORTANT: polarity is taking into account here! if negative it will switch the pulse
     //-------------------------------------------------------------------------------------
     float scale_factor = (1.0 * DAC_SCALE / (float)DAC_RESOLUTION) * config->getChannelMultiplicationFactor(i);
-    
+    std::cout<<"DAC_SCALE "<<DAC_SCALE<<std::endl;
+    std::cout<<"DAC_RESOLUTION "<<DAC_RESOLUTION<<std::endl;
+  
+    std::cout<<"NUM_SAMPLES "<<NUM_SAMPLES<<std::endl;
     // ------- Get baseline ------
     unsigned int bl_st_idx = static_cast<unsigned int>((config->channels[i].baseline_time[0])*NUM_SAMPLES);
     unsigned int bl_en_idx = static_cast<unsigned int>((config->channels[i].baseline_time[1])*NUM_SAMPLES);
     unsigned int bl_length = bl_en_idx - bl_st_idx;
-
+    std::cout<<"bl_length "<<bl_length<<std::endl;
     float baseline = 0;
     for(unsigned int j = bl_st_idx; j < bl_en_idx; j++) 
     {
@@ -644,7 +648,9 @@ void DRSAnalyzer::InitLoop()
       auto* leaf = br->GetLeaf(name);
       const TString& typeName = leaf->GetTypeName();
       void* buffer = nullptr;
-
+      if (name.BeginsWith("FERS")) {
+        continue;
+      }
       if (typeName == "Int_t") {
           buffer = new Int_t;
           tree_in->SetBranchAddress(name, (Int_t*)buffer);
@@ -666,9 +672,9 @@ void DRSAnalyzer::InitLoop()
           tree_in->SetBranchAddress(name, (Double_t*)buffer);
           tree->Branch(name, (Double_t*)buffer, name + "/D")->SetBasketSize(64 * 1024 * 1024); // Increase buffer size
       } else if (typeName.BeginsWith("vector")) {
-          auto* vec = new std::vector<float>;
+          auto* vec = new std::vector<unsigned short>;
           buffer = vec;
-          tree_in->SetBranchAddress(name, &vec);
+          tree_in->SetBranchAddress(name, &buffer);
           tree->Branch(name, &vec)->SetBasketSize(64 * 1024 * 1024); // Increase buffer size
       } else {
           std::cerr << "Unsupported type: " << typeName << " for branch " << name << std::endl;
@@ -683,8 +689,6 @@ void DRSAnalyzer::InitLoop()
     tree_in->SetBranchAddress(name, &channel);
     tree->Branch(name, &channel)->SetBasketSize(64 * 1024 * 1024); // Increase buffer size
   }
-  tree_in->GetEntry(0);
-
   NUM_CHANNELS = channelMap.size();
   std::cout<<"Number of Channels: "<<NUM_CHANNELS<<std::endl;
   NUM_TIMES = 0;
@@ -739,7 +743,6 @@ void DRSAnalyzer::InitLoop()
       var_names.push_back(Form("linear_RE__%dmV", (int)(fabs(thr))));
     }
   }
-
   for(const auto& ch : channelMap) 
   {
     const auto& chName = ch.first + "_";
